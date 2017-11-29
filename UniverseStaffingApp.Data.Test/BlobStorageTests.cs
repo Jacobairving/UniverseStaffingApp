@@ -10,31 +10,31 @@ using Microsoft.WindowsAzure.Storage.Blob; // Namespace for Blob storage types
 namespace UniverseStaffingApp.Data.Test
 {
     [TestClass]
-    public class TestAzureBlobStorage
+    public class BlobStorageTests
     {
         [TestMethod]
-        public void TestCreateBlobFromStream()
+        public void CreateBlobFromStream()
         {
             var blobService = new BlobService();
             blobService.CreateBlob("images-app", "text/test123.txt", new MemoryStream(Encoding.UTF8.GetBytes("whatever")));
         }
 
         [TestMethod]
-        public void TestGetContainerDirectories()
+        public void GetContainerDirectories()
         {
             var blobService = new BlobService();
             var directories = blobService.GetContainerDirectories("images-app");
         }
 
         [TestMethod]
-        public void TestCreateContainer()
+        public void CreateContainer()
         {
             var blobService = new BlobService();
             var directories = blobService.TryCreateContainer("USERIDABC12345678");
         }
 
         [TestMethod]
-        public void TestGetSingleBlobFile()
+        public void GetSingleBlobFile()
         {
             var blobService = new BlobService();
             var stream = blobService.GetBlob("images-app", "text/test123.txt");
