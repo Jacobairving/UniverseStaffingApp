@@ -16,7 +16,7 @@ namespace UniverseStaffingApp.Data.Test
         public void CreateBlobFromStream()
         {
             var blobService = new BlobService();
-            blobService.CreateBlob("images-app", "text/test123.txt", new MemoryStream(Encoding.UTF8.GetBytes("whatever")));
+            blobService.CreateBlob("USERID11111", "test123.txt", new MemoryStream(Encoding.UTF8.GetBytes("whatever")));
         }
 
         [TestMethod]
@@ -30,14 +30,45 @@ namespace UniverseStaffingApp.Data.Test
         public void CreateContainer()
         {
             var blobService = new BlobService();
-            var directories = blobService.TryCreateContainer("USERIDABC12345678");
+            var container = blobService.TryCreateUserContainer("USERID11111");
+        }
+
+        [TestMethod]
+        public void GetContainer()
+        {
+            var blobService = new BlobService();
+            var container = blobService.GetBlobContainer("USERID11111");
+        }
+
+        [TestMethod]
+        public void GetContainerPermissions()
+        {
+            var blobService = new BlobService();
+            var container = blobService.GetBlobContainer("USERID11111");
+            var permissions = container.GetPermissions();
+        }
+
+        [TestMethod]
+        public void GetContainerSaSToken()
+        {
+            var blobService = new BlobService();
+            var SaSUri = blobService.GetUserContainerSaSUri("USERID11111");
+
+        }
+
+        [TestMethod]
+        public void GetBlobSasToken()
+        {
+            var blobService = new BlobService();
+            var SaSUri = blobService.GetBlobSasUri("USERID11111", "test123.txt");
+
         }
 
         [TestMethod]
         public void GetSingleBlobFile()
         {
             var blobService = new BlobService();
-            var stream = blobService.GetBlob("images-app", "text/test123.txt");
+            var stream = blobService.GetBlobAsStream("images-app", "text/test123.txt");
             using (System.IO.FileStream output = new System.IO.FileStream(@"C:\Users\jacob\Desktop\blobfileasdf.txt", FileMode.Create))
             {
                 stream.CopyTo(output);

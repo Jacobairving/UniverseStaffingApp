@@ -19,10 +19,16 @@ namespace UniverseStaffingApp.Data
             _azureClient = CreateBlobClient();
         }
 
-        public MemoryStream GetBlob(string containerName, string blobName)
+        public CloudBlockBlob GetBlob(string containerName, string blobName)
         {
-            CloudBlobContainer container = _azureClient.GetContainerReference(containerName);
-            CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
+            CloudBlobContainer container = _azureClient.GetContainerReference(NormalizeContainerName(containerName));
+            return container.GetBlockBlobReference(blobName);
+        }
+
+
+        public MemoryStream GetBlobAsStream(string containerName, string blobName)
+        {
+            CloudBlockBlob blob = GetBlob(containerName, blobName);
 
             var stream = new MemoryStream();
 
@@ -31,7 +37,8 @@ namespace UniverseStaffingApp.Data
 
             return stream;
         }
-        
+
+       
         public List<CloudBlockBlob> GetBlobs(string container)
         {
             return GetBlobs(_azureClient.GetContainerReference(container));
@@ -42,7 +49,7 @@ namespace UniverseStaffingApp.Data
             return container.ListBlobs(null, true) as List<CloudBlockBlob>;
         }
 
-       
+
         public List<CloudBlobDirectory> GetContainerDirectories(string container)
         {
             return GetContainerDirectories(_azureClient.GetContainerReference(container));
@@ -67,7 +74,7 @@ namespace UniverseStaffingApp.Data
         public void CreateBlob(string container, string blobName, Stream stream)
         {
             // Retrieve reference to a previously created container.
-            var blobContainer = _azureClient.GetContainerReference(container);
+            var blobContainer = _azureClient.GetContainerReference(NormalizeContainerName(container));
 
             // Retrieve reference to a blob named "myblob".
             CloudBlockBlob blockBlob = blobContainer.GetBlockBlobReference(blobName);
@@ -77,10 +84,11 @@ namespace UniverseStaffingApp.Data
 
         // NOTE: This method throws an exception of Type "StorageException" when an invalid container name is provided
         // The message describing the error is on a property of the exception named RequestInformation.HttpStatusMessage
-        public CloudBlobContainer TryCreateContainer(string containerName)
+        public CloudBlobContainer TryCreateUserContainer(string containerName)
         {
             // Retrieve a reference to a container.
             CloudBlobContainer container = _azureClient.GetContainerReference(NormalizeContainerName(containerName));
+
             var wasCreated = false;
 
             try
@@ -91,9 +99,14 @@ namespace UniverseStaffingApp.Data
             {
                 throw ex;
             }
-            
+
+            if (wasCreated)
+            {
+                container.SetPermissions(AccessPolicyManager.GetStandardUserBlobContainerPolicy());
+            }
+
             // If it existed, return the existing reference, otherwise requery the container we created
-            return wasCreated ? container : _azureClient.GetContainerReference(containerName);
+            return container;
         }
 
         private CloudBlobClient CreateBlobClient()
@@ -112,5 +125,63 @@ namespace UniverseStaffingApp.Data
             normalizedName = name.ToLower();
             return normalizedName;
         }
+        
+        public CloudBlobContainer GetBlobContainer(string containerName)
+        {
+            return _azureClient.GetContainerReference(NormalizeContainerName(containerName));
+        }
+
+        public string GetUserContainerSaSUri(string containerName)
+        {
+            return GetContainerSasUri(_azureClient.GetContainerReference(NormalizeContainerName(containerName)), "StandardUserPolicy");
+        }
+
+        public string GetContainerSasUri(CloudBlobContainer container, string storedPolicyName = null)
+        {
+            string sasContainerToken;
+
+            // If no stored policy is specified, create a new access policy and define its constraints.
+            if (storedPolicyName == null)
+            {
+                // Note that the SharedAccessBlobPolicy class is used both to define the parameters of an ad-hoc SAS, and
+                // to construct a shared access policy that is saved to the container's shared access policies.
+                SharedAccessBlobPolicy adHocPolicy = new SharedAccessBlobPolicy()
+                {
+                    // When the start time for the SAS is omitted, the start time is assumed to be the time when the storage service receives the request.
+                    // Omitting the start time for a SAS that is effective immediately helps to avoid clock skew.
+                    SharedAccessExpiryTime = DateTime.UtcNow.AddHours(24),
+                    Permissions = SharedAccessBlobPermissions.Write | SharedAccessBlobPermissions.List
+                };
+
+                // Generate the shared access signature on the container, setting the constraints directly on the signature.
+                sasContainerToken = container.GetSharedAccessSignature(adHocPolicy, null);
+            }
+            else
+            {
+                // Generate the shared access signature on the container. In this case, all of the constraints for the
+                // shared access signature are specified on the stored access policy, which is provided by name.
+                // It is also possible to specify some constraints on an ad-hoc SAS and others on the stored access policy.
+                sasContainerToken = container.GetSharedAccessSignature(null, storedPolicyName);
+            }
+
+            // Return the URI string for the container, including the SAS token.
+            return container.Uri + sasContainerToken + "&comp=list&restype=container";
+        }
+
+        public string GetBlobSasUri(string containerName, string blobName)
+        {
+            //Get a reference to a blob within the container.
+            CloudBlockBlob blob = GetBlob(containerName, blobName);
+
+            // Get the standard user access policy to apply to this blob request
+            SharedAccessBlobPolicy blobAccessPolicy = AccessPolicyManager.GetStandardUserBlobPolicy();
+
+            //Generate the shared access signature on the blob, setting the constraints directly on the signature.
+            string sasBlobToken = blob.GetSharedAccessSignature(blobAccessPolicy);
+
+            //Return the URI string for the container, including the SAS token.
+            return blob.Uri + sasBlobToken;
+        }
+
     }
 }

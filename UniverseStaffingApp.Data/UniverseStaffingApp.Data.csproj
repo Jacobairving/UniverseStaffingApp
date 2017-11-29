@@ -65,6 +65,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AccessPolicyManager.cs" />
     <Compile Include="BlobService.cs" />
     <Compile Include="FileService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

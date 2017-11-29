@@ -24,7 +24,7 @@ namespace UniverseStaffingApp.Data
         {
             var userId = "ABC123456";
             var container = userId;
-            return _blobService.GetBlob(container, fileUri);
+            return _blobService.GetBlobAsStream(container, fileUri);
         }
     }
 }
